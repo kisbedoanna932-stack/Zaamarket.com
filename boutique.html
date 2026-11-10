@@ -1,0 +1,281 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f47721">
+  <title>Boutique - Zaamarket</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      color: #171717;
+    }
+    header {
+      background: #171717;
+      color: white;
+      padding: 18px 5%;
+    }
+    .logo { font-size: 27px; font-weight: bold; }
+    .logo span { color: #f47721; }
+    header p { margin: 5px 0 0; color: #ddd; font-size: 12px; }
+    nav {
+      display: flex;
+      gap: 20px;
+      overflow-x: auto;
+      padding: 15px 5%;
+      background: white;
+      border-bottom: 1px solid #eee;
+    }
+    nav a {
+      color: #222;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    main { width: 92%; max-width: 1200px; margin: 25px auto; }
+    .intro {
+      background: #171717;
+      color: white;
+      border-radius: 12px;
+      padding: 25px 20px;
+      margin-bottom: 25px;
+    }
+    .intro h1 { margin: 0 0 10px; }
+    .intro span { color: #f47721; }
+    .intro p { color: #ddd; line-height: 1.5; }
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-bottom: 25px;
+    }
+    input, select {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #ddd;
+      border-radius: 7px;
+      background: white;
+      font-size: 14px;
+    }
+    h2 { font-size: 21px; }
+    #message { color: #666; font-size: 14px; }
+    .products {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .product {
+      background: white;
+      border: 1px solid #eee;
+      border-radius: 9px;
+      overflow: hidden;
+    }
+    .product img {
+      width: 100%;
+      height: 145px;
+      object-fit: cover;
+      background: #eee;
+    }
+    .info { padding: 11px; }
+    .info h3 { font-size: 14px; margin: 0 0 8px; }
+    .price { color: #f47721; font-weight: bold; }
+    .description {
+      font-size: 12px;
+      color: #666;
+      line-height: 1.4;
+    }
+    .buy {
+      display: block;
+      text-align: center;
+      background: #f47721;
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    footer {
+      background: #171717;
+      color: white;
+      text-align: center;
+      padding: 25px;
+      margin-top: 45px;
+      font-size: 13px;
+    }
+    @media (min-width: 700px) {
+      .filters { grid-template-columns: 2fr 1fr 1fr; }
+      .products { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .product img { height: 200px; }
+      .intro { padding: 40px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ZAA<span>MARKET</span></div>
+  <p>La marketplace africaine</p>
+</header>
+
+<nav>
+  <a href="index.html">Accueil</a>
+  <a href="boutique.html">Boutique</a>
+  <a href="connexion.html">Connexion</a>
+  <a href="vendeur.html">Devenir vendeur</a>
+  <a href="panier.html">Panier</a>
+</nav>
+
+<main>
+  <section class="intro">
+    <h1>La <span>boutique</span> Zaamarket</h1>
+    <p>Découvrez des produits de différentes catégories à des prix accessibles.</p>
+  </section>
+
+  <h2>Tous nos produits</h2>
+
+  <section class="filters">
+    <input id="search" type="search" placeholder="Rechercher un produit...">
+
+    <select id="category">
+      <option value="">Toutes les catégories</option>
+    </select>
+
+    <select id="sort">
+      <option value="">Trier par</option>
+      <option value="asc">Prix croissant</option>
+      <option value="desc">Prix décroissant</option>
+    </select>
+  </section>
+
+  <p id="message">Chargement des produits...</p>
+  <section class="products" id="products"></section>
+</main>
+
+<footer>
+  <strong>Zaamarket</strong><br>
+  La marketplace africaine<br><br>
+  © 2026 Zaamarket. Tous droits réservés.
+</footer>
+
+<script>
+  const SUPABASE_URL = "TON_URL_SUPABASE";
+  const SUPABASE_ANON_KEY = "TA_CLE_ANON_PUBLIQUE";
+
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let allProducts = [];
+
+  async function loadCategories() {
+    const { data, error } = await db
+      .from("categories")
+      .select("id, name")
+      .order("name");
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    const select = document.getElementById("category");
+
+    data.forEach(cat => {
+      const option = document.createElement("option");
+      option.value = cat.id;
+      option.textContent = cat.name;
+      select.appendChild(option);
+    });
+  }
+
+  async function loadProducts() {
+    const message = document.getElementById("message");
+
+    const { data, error } = await db
+      .from("products")
+      .select("id, name, description, price, image_url, category_id")
+      .eq("status", "active")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      message.textContent = "Impossible de charger les produits. Vérifiez la connexion.";
+      console.error(error);
+      return;
+    }
+
+    allProducts = data || [];
+    displayProducts();
+  }
+
+  function displayProducts() {
+    const list = document.getElementById("products");
+    const message = document.getElementById("message");
+
+    const search = document.getElementById("search").value.toLowerCase();
+    const category = document.getElementById("category").value;
+    const sort = document.getElementById("sort").value;
+
+    let filtered = allProducts.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(search);
+      const matchesCategory = !category || String(product.category_id) === category;
+      return matchesSearch && matchesCategory;
+    });
+
+    if (sort === "asc") filtered.sort((a, b) => a.price - b.price);
+    if (sort === "desc") filtered.sort((a, b) => b.price - a.price);
+
+    list.innerHTML = "";
+
+    if (filtered.length === 0) {
+      message.textContent = "Aucun produit disponible pour le moment.";
+      return;
+    }
+
+    message.textContent = filtered.length + " produit(s) trouvé(s).";
+
+    filtered.forEach(product => {
+      const card = document.createElement("article");
+      card.className = "product";
+
+      const image = document.createElement("img");
+      image.src = product.image_url || "";
+      image.alt = product.name;
+      image.onerror = () => { image.style.display = "none"; };
+
+      const info = document.createElement("div");
+      info.className = "info";
+
+      const name = document.createElement("h3");
+      name.textContent = product.name;
+
+      const price = document.createElement("div");
+      price.className = "price";
+      price.textContent = Number(product.price).toLocaleString("fr-FR") + " FCFA";
+
+      const description = document.createElement("p");
+      description.className = "description";
+      description.textContent = product.description || "Découvrez ce produit sur Zaamarket.";
+
+      info.append(name, price, description);
+      card.append(image, info);
+      list.appendChild(card);
+    });
+  }
+
+  document.getElementById("search").addEventListener("input", displayProducts);
+  document.getElementById("category").addEventListener("change", displayProducts);
+  document.getElementById("sort").addEventListener("change", displayProducts);
+
+  loadCategories();
+  loadProducts();
+</script>
+
+</body>
+  </html>
+  
