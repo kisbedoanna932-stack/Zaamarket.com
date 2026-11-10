@@ -1,0 +1,215 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f47721">
+  <title>Devenir vendeur - Zaamarket</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      color: #171717;
+    }
+    header {
+      background: #171717;
+      color: white;
+      padding: 18px 5%;
+    }
+    .logo { font-size: 27px; font-weight: bold; }
+    .logo span { color: #f47721; }
+    nav {
+      display: flex;
+      gap: 20px;
+      overflow-x: auto;
+      padding: 15px 5%;
+      background: white;
+    }
+    nav a {
+      color: #222;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    main {
+      width: 92%;
+      max-width: 600px;
+      margin: 30px auto;
+    }
+    .panel {
+      background: white;
+      border: 1px solid #eee;
+      border-radius: 12px;
+      padding: 25px 20px;
+    }
+    h1 { font-size: 25px; }
+    .intro { color: #666; line-height: 1.6; }
+    label {
+      display: block;
+      margin: 17px 0 7px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #ddd;
+      border-radius: 7px;
+      font-size: 15px;
+      background: white;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    button {
+      width: 100%;
+      margin-top: 22px;
+      padding: 14px;
+      border: 0;
+      border-radius: 7px;
+      background: #f47721;
+      color: white;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .6; }
+    #message { line-height: 1.5; font-size: 14px; overflow-wrap: anywhere; }
+    .success { color: #258344; }
+    .error { color: #c0392b; }
+    footer {
+      margin-top: 45px;
+      padding: 25px;
+      background: #171717;
+      color: white;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ZAA<span>MARKET</span></div>
+  <p>La marketplace africaine</p>
+</header>
+
+<nav>
+  <a href="index.html">Accueil</a>
+  <a href="boutique.html">Boutique</a>
+  <a href="connexion.html">Connexion</a>
+  <a href="vendeur.html">Devenir vendeur</a>
+</nav>
+
+<main>
+  <section class="panel">
+    <h1>Devenir vendeur</h1>
+    <p class="intro">
+      Présentez votre boutique et rejoignez les vendeurs de Zaamarket.
+      Votre demande sera examinée par notre administration avant toute vente.
+    </p>
+
+    <form id="seller-form">
+      <label for="store-name">Nom de votre boutique</label>
+      <input id="store-name" type="text" required maxlength="100"
+             placeholder="Exemple : Ma Boutique">
+
+      <label for="description">Description de votre activité</label>
+      <textarea id="description" required maxlength="1000"
+                placeholder="Présentez les produits que vous souhaitez vendre..."></textarea>
+
+      <label for="country">Pays</label>
+      <select id="country" required>
+        <option value="Burkina Faso" selected>Burkina Faso</option>
+        <option value="Bénin">Bénin</option>
+        <option value="Côte d'Ivoire">Côte d'Ivoire</option>
+        <option value="Ghana">Ghana</option>
+        <option value="Mali">Mali</option>
+        <option value="Niger">Niger</option>
+        <option value="Sénégal">Sénégal</option>
+        <option value="Togo">Togo</option>
+        <option value="Guinée">Guinée</option>
+        <option value="Autre">Autre pays</option>
+      </select>
+
+      <button id="submit-button" type="submit">
+        Envoyer ma demande
+      </button>
+    </form>
+
+    <p id="message" aria-live="polite"></p>
+  </section>
+</main>
+
+<footer>
+  <strong>Zaamarket</strong><br>
+  La marketplace africaine
+</footer>
+
+<script>
+  const SUPABASE_URL = "https://kzqnaycenzirheupiffx.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_17wxs-0Oa9Hf-IiAtHKIMQ__RR0ms_1";
+
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const form = document.getElementById("seller-form");
+  const message = document.getElementById("message");
+  const submitButton = document.getElementById("submit-button");
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    submitButton.disabled = true;
+    message.textContent = "Vérification de votre compte...";
+    message.className = "";
+
+    try {
+      const { data: userData, error: userError } = await db.auth.getUser();
+
+      if (userError || !userData.user) {
+        throw new Error("Vous devez vous connecter avant de demander une boutique.");
+      }
+
+      const { data: existing, error: checkError } = await db
+        .from("stores")
+        .select("id, status")
+        .eq("owner_id", userData.user.id)
+        .limit(1);
+
+      if (checkError) throw checkError;
+
+      if (existing && existing.length > 0) {
+        throw new Error("Vous avez déjà une boutique enregistrée. Son statut est : " + existing[0].status);
+      }
+
+      const store = {
+        owner_id: userData.user.id,
+        name: document.getElementById("store-name").value.trim(),
+        description: document.getElementById("description").value.trim(),
+        country: document.getElementById("country").value,
+        status: "pending"
+      };
+
+      const { error } = await db.from("stores").insert(store);
+
+      if (error) throw error;
+
+      message.textContent =
+        "Votre demande a été envoyée avec succès. Elle est en attente de validation par l'administration.";
+      message.className = "success";
+      form.reset();
+      document.getElementById("country").value = "Burkina Faso";
+
+    } catch (error) {
+      message.textContent = "Erreur : " + error.message;
+      message.className = "error";
+    } finally {
+      submitButton.disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>
