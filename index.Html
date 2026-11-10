@@ -1,0 +1,186 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f47721">
+  <title>Zaamarket - La marketplace africaine</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      color: #171717;
+    }
+    header {
+      background: #171717;
+      color: white;
+      padding: 18px 5%;
+    }
+    .logo { font-size: 27px; font-weight: bold; }
+    .logo span { color: #f47721; }
+    .slogan { font-size: 12px; color: #ddd; margin-top: 5px; }
+    nav {
+      display: flex;
+      gap: 18px;
+      overflow-x: auto;
+      padding: 14px 5%;
+      background: white;
+      border-bottom: 1px solid #eee;
+    }
+    nav a {
+      color: #222;
+      text-decoration: none;
+      white-space: nowrap;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .hero {
+      margin: 18px auto;
+      width: 90%;
+      padding: 35px 22px;
+      background: #171717;
+      color: white;
+      border-radius: 12px;
+    }
+    .hero h1 { font-size: 27px; margin: 0 0 12px; }
+    .hero h1 span { color: #f47721; }
+    .hero p { line-height: 1.6; color: #ddd; }
+    .hero button, .action {
+      background: #f47721;
+      color: white;
+      border: 0;
+      border-radius: 6px;
+      padding: 12px 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    main { width: 90%; margin: 25px auto; }
+    h2 { font-size: 21px; }
+    .categories {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .category {
+      background: white;
+      padding: 18px 10px;
+      border-radius: 9px;
+      text-align: center;
+      border: 1px solid #eee;
+      font-weight: bold;
+    }
+    .category div { font-size: 27px; margin-bottom: 8px; }
+    .products {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .product {
+      background: white;
+      border-radius: 9px;
+      overflow: hidden;
+      border: 1px solid #eee;
+    }
+    .product img {
+      width: 100%;
+      height: 135px;
+      object-fit: cover;
+      background: #eee;
+    }
+    .product-info { padding: 10px; }
+    .product h3 { font-size: 14px; margin: 0 0 8px; }
+    .price { color: #f47721; font-weight: bold; }
+    .muted { color: #777; font-size: 13px; }
+    #message { color: #666; font-size: 14px; }
+    footer {
+      margin-top: 40px;
+      padding: 25px 5%;
+      background: #171717;
+      color: white;
+      text-align: center;
+      font-size: 13px;
+    }
+    @media (min-width: 700px) {
+      .categories { grid-template-columns: repeat(4, 1fr); }
+      .products { grid-template-columns: repeat(4, 1fr); }
+      .hero { padding: 55px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">ZAA<span>MARKET</span></div>
+    <div class="slogan">La marketplace africaine</div>
+  </header>
+
+  <nav>
+    <a href="#accueil">Accueil</a>
+    <a href="#categories">Catégories</a>
+    <a href="#produits">Produits</a>
+    <a href="#connexion">Connexion</a>
+    <a href="#vendeur">Devenir vendeur</a>
+    <a href="#contact">Contact</a>
+  </nav>
+
+  <section class="hero" id="accueil">
+    <h1>Bienvenue sur <span>Zaamarket</span></h1>
+    <p>Découvrez une grande variété de produits à des prix accessibles, partout en Afrique de l'Ouest.</p>
+    <button onclick="document.getElementById('produits').scrollIntoView({behavior:'smooth'})">
+      Découvrir les produits
+    </button>
+  </section>
+
+  <main>
+    <section id="categories">
+      <h2>Nos catégories</h2>
+      <div class="categories" id="category-list">
+        <div class="category"><div>👗</div>Mode et vêtements</div>
+        <div class="category"><div>👟</div>Chaussures</div>
+        <div class="category"><div>💄</div>Beauté et cosmétiques</div>
+        <div class="category"><div>📱</div>Téléphones et accessoires</div>
+        <div class="category"><div>🏠</div>Maison et cuisine</div>
+        <div class="category"><div>🎒</div>Accessoires</div>
+      </div>
+    </section>
+
+    <section id="produits">
+      <h2>Nos produits</h2>
+      <p id="message">Les produits seront affichés ici.</p>
+      <div class="products" id="product-list"></div>
+    </section>
+
+    <section id="connexion">
+      <h2>Connexion</h2>
+      <p class="muted">L'espace client sera activé dans la prochaine étape.</p>
+    </section>
+
+    <section id="vendeur">
+      <h2>Devenir vendeur</h2>
+      <p class="muted">Inscrivez votre boutique sur Zaamarket. Les inscriptions seront soumises à validation.</p>
+    </section>
+
+    <section id="contact">
+      <h2>Contact</h2>
+      <p class="muted">Une question ? Notre espace de contact sera bientôt disponible.</p>
+    </section>
+  </main>
+
+  <footer>
+    <strong>Zaamarket</strong><br>
+    La marketplace africaine<br><br>
+    © 2026 Zaamarket. Tous droits réservés.
+  </footer>
+
+  <script>
+    // Les identifiants Supabase seront ajoutés à l'étape suivante.
+    const SUPABASE_URL = "TON_URL_SUPABASE";
+    const SUPABASE_ANON_KEY = "TA_CLE_ANON_PUBLIQUE";
+
+    // La connexion à Supabase sera activée après configuration.
+  </script>
+</body>
+</html>
