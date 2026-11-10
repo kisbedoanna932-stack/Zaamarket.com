@@ -1,0 +1,237 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f47721">
+  <title>Détails du produit - Zaamarket</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      color: #171717;
+    }
+    header {
+      background: #171717;
+      color: white;
+      padding: 18px 5%;
+    }
+    .logo { font-size: 27px; font-weight: bold; }
+    .logo span { color: #f47721; }
+    nav {
+      display: flex;
+      gap: 20px;
+      overflow-x: auto;
+      padding: 15px 5%;
+      background: white;
+    }
+    nav a {
+      color: #222;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    main {
+      width: 92%;
+      max-width: 1000px;
+      margin: 30px auto;
+    }
+    .product {
+      background: white;
+      border-radius: 12px;
+      padding: 18px;
+      display: grid;
+      gap: 25px;
+      border: 1px solid #eee;
+    }
+    .product img {
+      width: 100%;
+      max-height: 420px;
+      object-fit: contain;
+      background: #f4f4f4;
+      border-radius: 8px;
+    }
+    h1 { font-size: 25px; }
+    .price {
+      color: #f47721;
+      font-size: 25px;
+      font-weight: bold;
+    }
+    .description {
+      line-height: 1.7;
+      color: #555;
+    }
+    .stock { color: #258344; font-weight: bold; }
+    .quantity {
+      width: 90px;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+    }
+    button {
+      background: #f47721;
+      color: white;
+      border: 0;
+      padding: 14px 20px;
+      border-radius: 7px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 15px;
+      width: 100%;
+    }
+    #message { color: #666; }
+    footer {
+      background: #171717;
+      color: white;
+      padding: 25px;
+      text-align: center;
+      margin-top: 50px;
+    }
+    @media (min-width: 700px) {
+      .product { grid-template-columns: 1fr 1fr; padding: 30px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ZAA<span>MARKET</span></div>
+  <p>La marketplace africaine</p>
+</header>
+
+<nav>
+  <a href="index.html">Accueil</a>
+  <a href="boutique.html">Boutique</a>
+  <a href="connexion.html">Connexion</a>
+  <a href="panier.html">Panier</a>
+</nav>
+
+<main>
+  <p id="message">Chargement du produit...</p>
+
+  <section class="product" id="product" hidden>
+    <div>
+      <img id="image" alt="Photo du produit">
+    </div>
+
+    <div>
+      <h1 id="name"></h1>
+      <p class="price" id="price"></p>
+      <p class="description" id="description"></p>
+      <p class="stock" id="stock"></p>
+
+      <label for="quantity">Quantité :</label><br><br>
+      <input class="quantity" id="quantity" type="number" min="1" value="1">
+
+      <button id="add-cart">Ajouter au panier</button>
+      <p id="cart-message"></p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <strong>Zaamarket</strong><br>
+  La marketplace africaine
+</footer>
+
+<script>
+  const SUPABASE_URL = "https://kzqnaycenzirheupiffx.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_17wxs-0Oa9Hf-IiAtHKIMQ__RR0ms_1";
+
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let currentProduct = null;
+
+  async function loadProduct() {
+    const id = new URLSearchParams(window.location.search).get("id");
+    const message = document.getElementById("message");
+
+    if (!id) {
+      message.textContent = "Aucun produit sélectionné.";
+      return;
+    }
+
+    const { data, error } = await db
+      .from("products")
+      .select("id, name, description, price, image_url, stock")
+      .eq("id", id)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (error || !data) {
+      message.textContent = "Produit introuvable ou indisponible.";
+      console.error(error);
+      return;
+    }
+
+    currentProduct = data;
+
+    document.getElementById("image").src = data.image_url || "";
+    document.getElementById("name").textContent = data.name;
+    document.getElementById("price").textContent =
+      Number(data.price).toLocaleString("fr-FR") + " FCFA";
+    document.getElementById("description").textContent =
+      data.description || "Aucune description disponible.";
+    document.getElementById("stock").textContent =
+      "Stock disponible : " + data.stock;
+
+    message.textContent = "";
+    document.getElementById("product").hidden = false;
+
+    const quantity = document.getElementById("quantity");
+    quantity.max = data.stock;
+    document.getElementById("add-cart").disabled = data.stock < 1;
+
+    if (data.stock < 1) {
+      document.getElementById("stock").textContent = "Rupture de stock";
+    }
+  }
+
+  document.getElementById("add-cart").addEventListener("click", () => {
+    if (!currentProduct) return;
+
+    const quantity = Number(document.getElementById("quantity").value);
+
+    if (!Number.isInteger(quantity) || quantity < 1 ||
+        quantity > currentProduct.stock) {
+      document.getElementById("cart-message").textContent =
+        "Quantité invalide ou stock insuffisant.";
+      return;
+    }
+
+    const cart = JSON.parse(localStorage.getItem("zaamarket_cart") || "[]");
+    const existing = cart.find(item => item.id === currentProduct.id);
+
+    if (existing) {
+      if (existing.quantity + quantity > currentProduct.stock) {
+        document.getElementById("cart-message").textContent =
+          "Stock insuffisant pour cette quantité.";
+        return;
+      }
+      existing.quantity += quantity;
+    } else {
+      cart.push({
+        id: currentProduct.id,
+        name: currentProduct.name,
+        price: currentProduct.price,
+        image_url: currentProduct.image_url,
+        quantity: quantity
+      });
+    }
+
+    localStorage.setItem("zaamarket_cart", JSON.stringify(cart));
+    document.getElementById("cart-message").textContent =
+      "Produit ajouté au panier !";
+  });
+
+  loadProduct();
+</script>
+
+</body>
+  </html>
+  
