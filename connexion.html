@@ -1,0 +1,258 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f47721">
+  <title>Connexion - Zaamarket</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      color: #171717;
+    }
+    header {
+      background: #171717;
+      color: white;
+      padding: 18px 5%;
+    }
+    .logo { font-size: 27px; font-weight: bold; }
+    .logo span { color: #f47721; }
+    nav {
+      display: flex;
+      gap: 20px;
+      overflow-x: auto;
+      padding: 15px 5%;
+      background: white;
+    }
+    nav a {
+      color: #222;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    main {
+      width: 92%;
+      max-width: 440px;
+      margin: 35px auto;
+    }
+    .panel {
+      background: white;
+      border: 1px solid #eee;
+      border-radius: 12px;
+      padding: 25px 20px;
+    }
+    h1 { font-size: 25px; margin-top: 0; }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .tabs button {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      background: white;
+      border-radius: 7px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .tabs button.active {
+      background: #f47721;
+      color: white;
+      border-color: #f47721;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: bold;
+      margin: 15px 0 7px;
+    }
+    input {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #ddd;
+      border-radius: 7px;
+      font-size: 15px;
+    }
+    .submit {
+      width: 100%;
+      margin-top: 22px;
+      padding: 14px;
+      border: 0;
+      border-radius: 7px;
+      background: #f47721;
+      color: white;
+      font-weight: bold;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    #message {
+      font-size: 14px;
+      line-height: 1.5;
+      margin-top: 15px;
+      overflow-wrap: anywhere;
+    }
+    .success { color: #258344; }
+    .error { color: #c0392b; }
+    footer {
+      background: #171717;
+      color: white;
+      text-align: center;
+      padding: 25px;
+      margin-top: 50px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ZAA<span>MARKET</span></div>
+  <p>La marketplace africaine</p>
+</header>
+
+<nav>
+  <a href="index.html">Accueil</a>
+  <a href="boutique.html">Boutique</a>
+  <a href="connexion.html">Connexion</a>
+  <a href="vendeur.html">Devenir vendeur</a>
+</nav>
+
+<main>
+  <section class="panel">
+    <h1 id="title">Bienvenue sur Zaamarket</h1>
+
+    <div class="tabs">
+      <button id="login-tab" class="active" type="button">Connexion</button>
+      <button id="signup-tab" type="button">Créer un compte</button>
+    </div>
+
+    <form id="auth-form">
+      <div id="name-field" hidden>
+        <label for="fullname">Nom complet</label>
+        <input id="fullname" type="text" autocomplete="name">
+      </div>
+
+      <label for="email">Adresse e-mail</label>
+      <input id="email" type="email" required autocomplete="email">
+
+      <label for="password">Mot de passe</label>
+      <input id="password" type="password" required minlength="6"
+             autocomplete="current-password">
+
+      <button class="submit" id="submit-button" type="submit">
+        Se connecter
+      </button>
+    </form>
+
+    <p id="message" aria-live="polite"></p>
+  </section>
+</main>
+
+<footer>
+  <strong>Zaamarket</strong><br>
+  La marketplace africaine
+</footer>
+
+<script>
+  const SUPABASE_URL = "https://kzqnaycenzirheupiffx.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_17wxs-0Oa9Hf-IiAtHKIMQ__RR0ms_1";
+
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let mode = "login";
+
+  const form = document.getElementById("auth-form");
+  const message = document.getElementById("message");
+  const loginTab = document.getElementById("login-tab");
+  const signupTab = document.getElementById("signup-tab");
+  const nameField = document.getElementById("name-field");
+  const submitButton = document.getElementById("submit-button");
+
+  function setMode(newMode) {
+    mode = newMode;
+    const isSignup = mode === "signup";
+
+    loginTab.classList.toggle("active", !isSignup);
+    signupTab.classList.toggle("active", isSignup);
+    nameField.hidden = !isSignup;
+    document.getElementById("fullname").required = isSignup;
+    document.getElementById("password").autocomplete =
+      isSignup ? "new-password" : "current-password";
+
+    document.getElementById("title").textContent =
+      isSignup ? "Créer votre compte" : "Bienvenue sur Zaamarket";
+
+    submitButton.textContent =
+      isSignup ? "Créer mon compte" : "Se connecter";
+
+    message.textContent = "";
+    message.className = "";
+  }
+
+  loginTab.addEventListener("click", () => setMode("login"));
+  signupTab.addEventListener("click", () => setMode("signup"));
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const fullname = document.getElementById("fullname").value.trim();
+
+    submitButton.disabled = true;
+    message.textContent = "Veuillez patienter...";
+    message.className = "";
+
+    try {
+      if (mode === "signup") {
+        const { data, error } = await db.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: fullname }
+          }
+        });
+
+        if (error) throw error;
+
+        if (data.session) {
+          message.textContent = "Compte créé avec succès !";
+          message.className = "success";
+        } else {
+          message.textContent =
+            "Compte créé. Consultez votre boîte e-mail pour confirmer votre adresse.";
+          message.className = "success";
+        }
+      } else {
+        const { error } = await db.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (error) throw error;
+
+        message.textContent = "Connexion réussie ! Redirection...";
+        message.className = "success";
+
+        setTimeout(() => {
+          window.location.href = "index.html";
+        }, 1200);
+      }
+    } catch (error) {
+      message.textContent = "Erreur : " + error.message;
+      message.className = "error";
+    } finally {
+      submitButton.disabled = false;
+    }
+  });
+</script>
+
+</body>
+  </html>
+  
