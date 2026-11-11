@@ -216,12 +216,13 @@
       existing.quantity += quantity;
     } else {
       cart.push({
-        id: currentProduct.id,
-        name: currentProduct.name,
-        price: currentProduct.price,
-        image_url: currentProduct.image_url,
-        quantity: quantity
-      });
+  id: currentProduct.id,
+  store_id: currentProduct.store_id,
+  name: currentProduct.name,
+  price: currentProduct.price,
+  image_url: currentProduct.image_url,
+  quantity: quantity
+});
     }
 
     localStorage.setItem("zaamarket_cart", JSON.stringify(cart));
