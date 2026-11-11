@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f47721">
+  <title>Commande - Zaamarket</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      color: #171717;
+    }
+    header {
+      background: #171717;
+      color: white;
+      padding: 20px 5%;
+    }
+    header strong { font-size: 25px; }
+    header span { color: #f47721; }
+    nav {
+      background: white;
+      padding: 15px 5%;
+      display: flex;
+      gap: 20px;
+    }
+    nav a {
+      color: #222;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    main {
+      width: 92%;
+      max-width: 650px;
+      margin: 25px auto;
+    }
+    .panel {
+      background: white;
+      padding: 22px;
+      border-radius: 10px;
+    }
+    h1 { font-size: 23px; }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 13px;
+      margin-top: 7px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 20px;
+      border: 0;
+      border-radius: 6px;
+      background: #f47721;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    #message { line-height: 1.5; }
+    footer {
+      background: #171717;
+      color: white;
+      text-align: center;
+      padding: 25px;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <strong>ZAA<span>MARKET</span></strong>
+  <p>Finaliser ma commande</p>
+</header>
+
+<nav>
+  <a href="index.html">Accueil</a>
+  <a href="boutique.html">Boutique</a>
+  <a href="panier.html">Panier</a>
+</nav>
+
+<main>
+  <section class="panel">
+    <h1>Informations de livraison</h1>
+    <p id="total">Calcul du total...</p>
+    <p id="message"></p>
+
+    <form id="orderForm">
+      <label for="country">Pays</label>
+      <select id="country" required>
+        <option value="Burkina Faso">Burkina Faso</option>
+        <option value="Bénin">Bénin</option>
+        <option value="Côte d'Ivoire">Côte d'Ivoire</option>
+        <option value="Ghana">Ghana</option>
+        <option value="Mali">Mali</option>
+        <option value="Niger">Niger</option>
+        <option value="Sénégal">Sénégal</option>
+        <option value="Togo">Togo</option>
+        <option value="Guinée">Guinée</option>
+        <option value="Autre">Autre</option>
+      </select>
+
+      <label for="city">Ville</label>
+      <input id="city" type="text" required placeholder="Exemple : Ouagadougou">
+
+      <label for="address">Adresse de livraison</label>
+      <textarea id="address" required placeholder="Quartier, secteur, indications..."></textarea>
+
+      <label for="phone">Téléphone</label>
+      <input id="phone" type="tel" required placeholder="Votre numéro de téléphone">
+
+      <label for="payment">Mode de paiement</label>
+      <select id="payment" required>
+        <option value="cash_on_delivery">Paiement à la livraison</option>
+        <option value="mobile_money">Mobile Money</option>
+      </select>
+
+      <button type="submit" id="submitButton">
+        Confirmer ma commande
+      </button>
+    </form>
+  </section>
+</main>
+
+<footer>
+  Zaamarket - La marketplace africaine
+</footer>
+
+<script>
+  const SUPABASE_URL = "TON_URL_SUPABASE";
+  const SUPABASE_ANON_KEY = "TA_CLE_ANON_PUBLIQUE";
+
+  const db = supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+  );
+
+  const cartKey = "zaamarket_cart";
+  let cart = JSON.parse(localStorage.getItem(cartKey) || "[]");
+
+  const total = cart.reduce(
+    (sum, item) => sum + Number(item.price) * Number(item.quantity),
+    0
+  );
+
+  document.getElementById("total").textContent =
+    "Total : " + total.toLocaleString("fr-FR") + " FCFA";
+
+  const message = document.getElementById("message");
+  const button = document.getElementById("submitButton");
+
+  if (cart.length === 0) {
+    message.textContent = "Votre panier est vide.";
+    button.disabled = true;
+  }
+
+  document.getElementById("orderForm").addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    message.textContent = "";
+
+    if (cart.length === 0) {
+      message.textContent = "Votre panier est vide.";
+      return;
+    }
+
+    if (cart.some(item => !item.store_id)) {
+      message.textContent =
+        "Un produit de votre panier doit être retiré puis ajouté à nouveau depuis la boutique.";
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Enregistrement en cours...";
+
+    try {
+      const { data: userData, error: userError } =
+        await db.auth.getUser();
+
+      if (userError || !userData.user) {
+        message.textContent =
+          "Vous devez vous connecter avant de commander.";
+        button.disabled = false;
+        button.textContent = "Confirmer ma commande";
+        return;
+      }
+
+      const user = userData.user;
+
+      const productIds = cart.map(item => item.id);
+
+      const { data: products, error: productError } = await db
+        .from("products")
+        .select("id, store_id, price, stock, status")
+        .in("id", productIds);
+
+      if (productError) throw productError;
+
+      for (const item of cart) {
+        const product = products.find(p => p.id === item.id);
+
+        if (!product || product.status !== "active") {
+          throw new Error("Un produit n'est plus disponible.");
+        }
+
+        if (product.store_id !== item.store_id) {
+          throw new Error("Une information de vendeur est incorrecte.");
+        }
+
+        if (Number(item.quantity) > Number(product.stock)) {
+          throw new Error("Stock insuffisant pour un produit du panier.");
+        }
+      }
+
+      const groups = {};
+
+      cart.forEach(item => {
+        if (!groups[item.store_id]) {
+          groups[item.store_id] = [];
+        }
+        groups[item.store_id].push(item);
+      });
+
+      const country = document.getElementById("country").value;
+      const city = document.getElementById("city").value.trim();
+      const address = document.getElementById("address").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const payment = document.getElementById("payment").value;
+
+      for (const storeId of Object.keys(groups)) {
+        const items = groups[storeId];
+
+        const orderTotal = items.reduce(
+          (sum, item) =>
+            sum + Number(item.price) * Number(item.quantity),
+          0
+        );
+
+        const { data: order, error: orderError } = await db
+          .from("orders")
+          .insert({
+            customer_id: user.id,
+            store_id: storeId,
+            total: orderTotal,
+            country: country,
+            city: city,
+            delivery_address: address,
+            phone: phone,
+            payment_method: payment,
+            payment_status: "pending",
+            status: "pending"
+          })
+          .select("id")
+          .single();
+
+        if (orderError) throw orderError;
+
+        const orderItems = items.map(item => ({
+          order_id: order.id,
+          product_id: item.id,
+          quantity: Number(item.quantity),
+          unit_price: Number(item.price)
+        }));
+
+        const { error: itemsError } = await db
+          .from("order_items")
+          .insert(orderItems);
+
+        if (itemsError) throw itemsError;
+      }
+
+      localStorage.removeItem(cartKey);
+
+      message.textContent =
+        "Votre commande a été enregistrée avec succès !";
+
+      button.textContent = "Commande enregistrée";
+
+      document.getElementById("orderForm").reset();
+
+    } catch (error) {
+      console.error(error);
+      message.textContent =
+        "Erreur : " + (error.message || "Impossible d'enregistrer la commande.");
+      button.disabled = false;
+      button.textContent = "Réessayer";
+    }
+  });
+</script>
+
+</body>
+  </html>
