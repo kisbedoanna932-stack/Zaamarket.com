@@ -158,7 +158,7 @@
 
     const { data, error } = await db
       .from("products")
-      .select("id, name, description, price, image_url, stock")
+      .select("id, store_id, name, description, price, image_url, stock")
       .eq("id", id)
       .eq("status", "active")
       .maybeSingle();
