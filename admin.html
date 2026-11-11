@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f47721">
+  <title>Administration - Zaamarket</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      color: #171717;
+    }
+    header {
+      background: #171717;
+      color: white;
+      padding: 20px;
+    }
+    header span { color: #f47721; }
+    main {
+      width: 94%;
+      max-width: 1000px;
+      margin: 25px auto;
+    }
+    .panel {
+      background: white;
+      padding: 18px;
+      margin-bottom: 20px;
+      border-radius: 9px;
+    }
+    h2 { font-size: 20px; }
+    .item {
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 14px;
+      margin: 12px 0;
+    }
+    .item p { font-size: 14px; line-height: 1.5; }
+    .item img {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+    button {
+      border: 0;
+      border-radius: 5px;
+      padding: 10px 14px;
+      margin: 5px 5px 5px 0;
+      color: white;
+      font-weight: bold;
+      background: #f47721;
+    }
+    button.refuse { background: #555; }
+    button:disabled { opacity: .5; }
+    #message { line-height: 1.5; }
+    .empty { color: #777; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>ZAA<span>MARKET</span></h1>
+  <p>Tableau de bord administrateur</p>
+</header>
+
+<main>
+  <p id="message">Vérification de votre accès...</p>
+
+  <section class="panel">
+    <h2>Demandes des vendeurs</h2>
+    <div id="stores">Chargement...</div>
+  </section>
+
+  <section class="panel">
+    <h2>Produits à examiner</h2>
+    <div id="products">Chargement...</div>
+  </section>
+</main>
+
+<script>
+  const SUPABASE_URL = "https://kzqnaycenzirheupiffx.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_17wxs-0Oa9Hf-IiAtHKIMQ__RR0ms_1";
+
+  const db = supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+  );
+
+  const message = document.getElementById("message");
+
+  async function startAdmin() {
+    const { data: userData, error: userError } =
+      await db.auth.getUser();
+
+    if (userError || !userData.user) {
+      message.textContent = "Connectez-vous avec votre compte administrateur.";
+      return;
+    }
+
+    const { data: admin, error: adminError } = await db
+      .from("app_admins")
+      .select("user_id")
+      .eq("user_id", userData.user.id)
+      .maybeSingle();
+
+    if (adminError || !admin) {
+      message.textContent = "Accès refusé : vous n'êtes pas administrateur.";
+      return;
+    }
+
+    message.textContent = "Bienvenue dans l'administration de Zaamarket.";
+    await loadStores();
+    await loadProducts();
+  }
+
+  async function loadStores() {
+    const container = document.getElementById("stores");
+
+    const { data, error } = await db
+      .from("stores")
+      .select("id, name, description, country, created_at")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      container.textContent = "Impossible de charger les boutiques.";
+      console.error(error);
+      return;
+    }
+
+    container.innerHTML = "";
+
+    if (!data || data.length === 0) {
+      container.innerHTML = '<p class="empty">Aucune demande en attente.</p>';
+      return;
+    }
+
+    data.forEach(store => {
+      const item = document.createElement("div");
+      item.className = "item";
+
+      const name = document.createElement("h3");
+      name.textContent = store.name;
+
+      const description = document.createElement("p");
+      description.textContent = store.description || "Aucune description";
+
+      const country = document.createElement("p");
+      country.textContent = "Pays : " + store.country;
+
+      const approve = document.createElement("button");
+      approve.textContent = "Approuver";
+      approve.onclick = () => updateStore(store.id, "approved");
+
+      const refuse = document.createElement("button");
+      refuse.textContent = "Refuser";
+      refuse.className = "refuse";
+      refuse.onclick = () => updateStore(store.id, "rejected");
+
+      item.append(name, description, country, approve, refuse);
+      container.appendChild(item);
+    });
+  }
+
+  async function updateStore(id, status) {
+    if (!confirm("Confirmer cette décision ?")) return;
+
+    const { error } = await db
+      .from("stores")
+      .update({ status: status })
+      .eq("id", id);
+
+    if (error) {
+      alert("Erreur : " + error.message);
+      return;
+    }
+
+    await loadStores();
+  }
+
+  async function loadProducts() {
+    const container = document.getElementById("products");
+
+    const { data, error } = await db
+      .from("products")
+      .select("id, name, description, price, image_url, stock")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      container.textContent = "Impossible de charger les produits.";
+      console.error(error);
+      return;
+    }
+
+    container.innerHTML = "";
+
+    if (!data || data.length === 0) {
+      container.innerHTML = '<p class="empty">Aucun produit en attente.</p>';
+      return;
+    }
+
+    data.forEach(product => {
+      const item = document.createElement("div");
+      item.className = "item";
+
+      if (product.image_url) {
+        const image = document.createElement("img");
+        image.src = product.image_url;
+        image.alt = product.name;
+        item.appendChild(image);
+      }
+
+      const name = document.createElement("h3");
+      name.textContent = product.name;
+
+      const description = document.createElement("p");
+      description.textContent = product.description || "Aucune description";
+
+      const price = document.createElement("p");
+      price.textContent = Number(product.price).toLocaleString("fr-FR") + " FCFA";
+
+      const stock = document.createElement("p");
+      stock.textContent = "Stock : " + product.stock;
+
+      const approve = document.createElement("button");
+      approve.textContent = "Approuver";
+      approve.onclick = () => updateProduct(product.id, "active");
+
+      const refuse = document.createElement("button");
+      refuse.textContent = "Refuser";
+      refuse.className = "refuse";
+      refuse.onclick = () => updateProduct(product.id, "rejected");
+
+      item.append(name, description, price, stock, approve, refuse);
+      container.appendChild(item);
+    });
+  }
+
+  async function updateProduct(id, status) {
+    if (!confirm("Confirmer cette décision ?")) return;
+
+    const { error } = await db
+      .from("products")
+      .update({ status: status })
+      .eq("id", id);
+
+    if (error) {
+      alert("Erreur : " + error.message);
+      return;
+    }
+
+    await loadProducts();
+  }
+
+  startAdmin();
+</script>
+
+</body>
+  </html>
