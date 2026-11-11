@@ -1,0 +1,261 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f47721">
+  <title>Mon panier - Zaamarket</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      color: #171717;
+    }
+    header {
+      background: #171717;
+      color: white;
+      padding: 18px 5%;
+    }
+    .logo { font-size: 27px; font-weight: bold; }
+    .logo span { color: #f47721; }
+    nav {
+      display: flex;
+      gap: 20px;
+      overflow-x: auto;
+      padding: 15px 5%;
+      background: white;
+    }
+    nav a {
+      color: #222;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    main {
+      width: 92%;
+      max-width: 950px;
+      margin: 30px auto;
+    }
+    .panel {
+      background: white;
+      border: 1px solid #eee;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    h1 { font-size: 25px; }
+    .item {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 15px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .item img {
+      width: 85px;
+      height: 85px;
+      object-fit: cover;
+      background: #eee;
+      border-radius: 7px;
+    }
+    .details { flex: 1; min-width: 0; }
+    .details h3 { font-size: 15px; margin: 0 0 7px; }
+    .price { color: #f47721; font-weight: bold; }
+    .quantity {
+      width: 65px;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .remove {
+      background: #eee;
+      color: #333;
+      border: 0;
+      padding: 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 7px;
+    }
+    .total {
+      text-align: right;
+      font-size: 21px;
+      font-weight: bold;
+      margin-top: 25px;
+    }
+    .total span { color: #f47721; }
+    .action {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      border: 0;
+      border-radius: 7px;
+      background: #f47721;
+      color: white;
+      font-size: 15px;
+      font-weight: bold;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    .empty { color: #777; line-height: 1.6; }
+    footer {
+      background: #171717;
+      color: white;
+      text-align: center;
+      padding: 25px;
+      margin-top: 45px;
+    }
+    @media (max-width: 430px) {
+      .item { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ZAA<span>MARKET</span></div>
+  <p>La marketplace africaine</p>
+</header>
+
+<nav>
+  <a href="index.html">Accueil</a>
+  <a href="boutique.html">Boutique</a>
+  <a href="connexion.html">Connexion</a>
+  <a href="panier.html">Panier</a>
+</nav>
+
+<main>
+  <section class="panel">
+    <h1>Mon panier</h1>
+    <div id="cart-items"></div>
+    <p class="total">Total : <span id="total">0 FCFA</span></p>
+    <a href="boutique.html" class="action">Continuer mes achats</a>
+    <button id="checkout" class="action">Passer la commande</button>
+    <p id="message" class="empty"></p>
+  </section>
+</main>
+
+<footer>
+  <strong>Zaamarket</strong><br>
+  La marketplace africaine
+</footer>
+
+<script>
+  const CART_KEY = "zaamarket_cart";
+
+  function getCart() {
+    try {
+      const cart = JSON.parse(localStorage.getItem(CART_KEY) || "[]");
+      return Array.isArray(cart) ? cart : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveCart(cart) {
+    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+  }
+
+  function formatPrice(price) {
+    return Number(price).toLocaleString("fr-FR") + " FCFA";
+  }
+
+  function renderCart() {
+    const cart = getCart();
+    const container = document.getElementById("cart-items");
+    const totalElement = document.getElementById("total");
+    const message = document.getElementById("message");
+
+    container.innerHTML = "";
+    let total = 0;
+
+    if (cart.length === 0) {
+      message.textContent = "Votre panier est vide. Découvrez nos produits dans la boutique.";
+      totalElement.textContent = formatPrice(0);
+      return;
+    }
+
+    message.textContent = "";
+
+    cart.forEach((item, index) => {
+      const price = Number(item.price);
+      const quantity = Number(item.quantity);
+      total += price * quantity;
+
+      const row = document.createElement("article");
+      row.className = "item";
+
+      const image = document.createElement("img");
+      image.src = item.image_url || "";
+      image.alt = item.name || "Produit";
+      image.onerror = () => { image.style.display = "none"; };
+
+      const details = document.createElement("div");
+      details.className = "details";
+
+      const name = document.createElement("h3");
+      name.textContent = item.name;
+
+      const unitPrice = document.createElement("p");
+      unitPrice.className = "price";
+      unitPrice.textContent = formatPrice(price);
+
+      const quantityInput = document.createElement("input");
+      quantityInput.className = "quantity";
+      quantityInput.type = "number";
+      quantityInput.min = "1";
+      quantityInput.step = "1";
+      quantityInput.value = quantity;
+      quantityInput.setAttribute("aria-label", "Quantité de " + item.name);
+
+      quantityInput.addEventListener("change", () => {
+        const newQuantity = Math.floor(Number(quantityInput.value));
+        if (!Number.isFinite(newQuantity) || newQuantity < 1) {
+          quantityInput.value = quantity;
+          return;
+        }
+        cart[index].quantity = newQuantity;
+        saveCart(cart);
+        renderCart();
+      });
+
+      const removeButton = document.createElement("button");
+      removeButton.className = "remove";
+      removeButton.type = "button";
+      removeButton.textContent = "Supprimer";
+      removeButton.addEventListener("click", () => {
+        cart.splice(index, 1);
+        saveCart(cart);
+        renderCart();
+      });
+
+      details.append(name, unitPrice, quantityInput, removeButton);
+      row.append(image, details);
+      container.appendChild(row);
+    });
+
+    totalElement.textContent = formatPrice(total);
+  }
+
+  document.getElementById("checkout").addEventListener("click", () => {
+    const cart = getCart();
+
+    if (cart.length === 0) {
+      document.getElementById("message").textContent =
+        "Ajoutez d'abord des produits à votre panier.";
+      return;
+    }
+
+    window.location.href = "commande.html";
+  });
+
+  renderCart();
+</script>
+
+</body>
+                           </html>
+                           
